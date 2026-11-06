@@ -1,0 +1,11 @@
+menu "SDR link"
+
+    config SDR_LINK_BAUD
+        int "UART0 baud rate"
+        default 921600
+        help
+            Must divide the 80 MHz APB clock cleanly and be supported by the
+            USB bridge. A classic CP2102 tops out at 921600: a request for
+            1000000 is accepted but the chip still runs at 921600.
+
+endmenu

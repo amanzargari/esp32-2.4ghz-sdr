@@ -1,0 +1,40 @@
+# ESP-IDF build output
+build/
+build_*/
+managed_components/
+dependencies.lock
+
+# Generated configuration. sdkconfig.defaults is the source of these.
+sdkconfig
+sdkconfig.old
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# SDR capture data
+*.npy
+*.npz
+*.cf32
+*.cs16
+*.cu8
+*.bin
+*.fifo
+# Capture sidecars written by pi_receiver.py. Nothing in this repository needs a .json file.
+*.json
+
+# Generated plots. The examples used by the README are kept.
+*.png
+!example_capture.png
+!example_panorama.png
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

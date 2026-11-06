@@ -1,0 +1,29 @@
+# Source of truth for the build config. The generated `sdkconfig` is derived
+# from this file; delete it (or run `idf.py fullclean`) after editing here.
+
+CONFIG_IDF_TARGET="esp32"
+
+# Clocks and flash
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# Performance
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_SILENT=y
+CONFIG_UART_ISR_IN_IRAM=y
+
+# Radio: Wi-Fi PHY only, and Bluetooth is not in the build graph at all.
+# Run a full calibration on every boot so no NVS is needed.
+CONFIG_ESP_PHY_CALIBRATION_AND_DATA_STORAGE=n
+
+# FreeRTOS: no tracing or stats. Stays dual-core so core 1 is free for DMA work.
+CONFIG_FREERTOS_USE_TRACE_FACILITY=n
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=n
+CONFIG_FREERTOS_USE_TICKLESS_IDLE=n
+CONFIG_PM_ENABLE=n
+
+# UART0 carries the binary link, so nothing else may write to it.
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_LOG_DEFAULT_LEVEL_NONE=y
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
