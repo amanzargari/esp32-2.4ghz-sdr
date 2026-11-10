@@ -23,6 +23,8 @@ env/
 *.cu8
 *.bin
 *.fifo
+*.mat
+recordings/
 # Capture sidecars written by pi_receiver.py. Nothing in this repository needs a .json file.
 *.json
 

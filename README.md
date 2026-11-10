@@ -9,6 +9,7 @@ This project turns a NodeMCU-style ESP32 (Xtensa LX6) into a raw I/Q receiver. I
 - **Full-band panorama** of 2.4 GHz, stitched from channel hops at up to 6.8 passes per second
 - **BLE advertising demodulator** in pure NumPy/SciPy, from I/Q samples to parsed PDUs with CRC-24 verification
 - **Bridge to standard SDR tools** through raw I/Q streams and an `rtl_tcp` server
+- **MATLAB recordings** of interleaved complex-short samples, at lab-style settings such as 2402 MHz and 2 MS/s
 
 > **This is a burst receiver, not a continuous one.** The radio captures a snapshot of at most about 1 ms, and then has to send it. It's excellent for spectrum surveys, signal inspection and teaching, but it misses whatever happens between bursts. See [Known limitations](#known-limitations).
 
@@ -408,6 +409,48 @@ bursts: 1, packets with valid CRC: 1, CRC failures: 0, cut off by the burst's en
 
 The demodulator needs SciPy, so it normally runs on the PC. It takes about 5 ms per burst there, against about 28 ms between bursts.
 
+### Recording to MATLAB
+
+`record_mat.py` records the radio environment to a `.mat` file for MATLAB or Octave. It runs on the PC, and `--pi` starts the Pi side over SSH. The presets match common BLE lab setups:
+
+| Preset | Center | Sample rate | Gain index | Captured as |
+|---|---|---|---|---|
+| `single` | 2402 MHz (BLE channel 37) | 2 MS/s | 48 | 2404 MHz at 16 MS/s, shifted and decimated by 8 |
+| `multi` | 2411 MHz (channel 37 and the data channels above it) | 20 MS/s | 40 | 2411 MHz at 40 MS/s, decimated by 2 |
+
+Record 5 seconds with a preset:
+
+```bash
+python3 tools/record_mat.py --preset single --pi pi@192.168.77.2 --connect 192.168.77.2:5555 --out single.mat
+```
+
+Or choose the center and rate yourself:
+
+```bash
+python3 tools/record_mat.py --center-mhz 2402.5 --rate 1e6 --pi pi@192.168.77.2 --connect 192.168.77.2:5555 --out tuned.mat
+```
+
+The ESP32 samples at 16, 40 or 80 MS/s and tunes to whole MHz. So the recording is made at a native rate and tuning, then shifted and resampled in software to the requested center and rate. When there's room, the tuning is placed outside the recorded band, which keeps the receiver's own DC offset out of it.
+
+The file contains two variables:
+
+- **`iq`:** a row vector of int16 `[i0, q0, i1, q1, ...]` (complex short). The ADC's full scale is 16384, leaving 6 dB of headroom for the resampling filter. `--format float32` gives complex float, with full scale at 1.0.
+- **`config`:** a struct with the center frequency, sample rate, gain, data format, the tuning and native rate used, and where each burst lies.
+
+In MATLAB:
+
+```matlab
+load single.mat
+x = double(iq(1:2:end)) + 1j * double(iq(2:2:end));
+t = (0:numel(x) - 1) / config.sample_rate_hz;
+```
+
+The file keeps true time: each burst sits at the moment it was captured, with zeros in between. So a 5-second recording really spans 5 seconds, but only about 3.7% of it (at `single`) or 1.5% (at `multi`) is real signal. `config.burst_start` (1-based) and `config.burst_length` say which samples are real. `--gaps join` puts the bursts one after another instead.
+
+A 5-second recording at `single` is 40 MB, and at `multi` 400 MB, since the zeros are stored too. `--compress` shrinks the gaps' zeros to almost nothing, but then the file size no longer shows what the data format costs.
+
+At `multi`, the bursts last only 410 µs, the longest a 16,380-sample burst can be at 40 MS/s, so longer BLE packets are cut off. The gain indices aren't dB values, so a USRP's gain settings don't carry over. At 2411 MHz, strong Wi-Fi saturated the ADC in 4% of bursts at gain 48 and never at gain 40.
+
 ### SDR tools bridge
 
 `sdr_source.py` connects to a Pi streaming on one frequency. It isn't for sweeps.
@@ -673,6 +716,7 @@ Bit 27 is set on some samples, and its meaning is unknown. The I/Q order was det
     |-- band_sweep.py       Band panorama
     |-- ble_demod.py        BLE physical layer demodulator and self-test
     |-- sdr_source.py       Raw I/Q streams and rtl_tcp server
+    |-- record_mat.py       MATLAB recordings
     `-- test_link.py        UART health check
 ```
 
