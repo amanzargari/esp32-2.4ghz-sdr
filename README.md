@@ -445,6 +445,29 @@ x = double(iq(1:2:end)) + 1j * double(iq(2:2:end));
 t = (0:numel(x) - 1) / config.sample_rate_hz;
 ```
 
+To see the FFT spectrum, power over time and a spectrogram in Python:
+
+```bash
+python3 tools/plot_mat.py single.mat
+```
+
+Add `--burst 12` to look at one burst instead of the average, or `--save single.png` to write an image. The spectrum is the same computation as this MATLAB code, burst by burst, using only the real samples:
+
+```matlab
+load single.mat
+x = (double(iq(1:2:end)) + 1j*double(iq(2:2:end))) / config.adc_full_scale;
+fs = config.sample_rate_hz;
+N = min(config.burst_length);
+P = zeros(N, 1);
+for k = 1:numel(config.burst_start)
+    b = x(config.burst_start(k) + (0:N-1));
+    P = P + abs(fftshift(fft(b(:)))).^2 / N^2;
+end
+f = ((0:N-1) - floor(N/2)) * fs / N;
+plot(f/1e6, 10*log10(P / numel(config.burst_start))), grid on
+xlabel('Frequency relative to center (MHz)'), ylabel('Power per bin (dBFS)')
+```
+
 The file keeps true time: each burst sits at the moment it was captured, with zeros in between. So a 5-second recording really spans 5 seconds, but only about 3.7% of it (at `single`) or 1.5% (at `multi`) is real signal. `config.burst_start` (1-based) and `config.burst_length` say which samples are real. `--gaps join` puts the bursts one after another instead.
 
 A 5-second recording at `single` is 40 MB, and at `multi` 400 MB, since the zeros are stored too. `--compress` shrinks the gaps' zeros to almost nothing, but then the file size no longer shows what the data format costs.
@@ -717,6 +740,7 @@ Bit 27 is set on some samples, and its meaning is unknown. The I/Q order was det
     |-- ble_demod.py        BLE physical layer demodulator and self-test
     |-- sdr_source.py       Raw I/Q streams and rtl_tcp server
     |-- record_mat.py       MATLAB recordings
+    |-- plot_mat.py         FFT spectrum, power and spectrogram of a recording
     `-- test_link.py        UART health check
 ```
 
